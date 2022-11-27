@@ -25,6 +25,11 @@ MIELE_LABELS = {
 			"de": "Schwarzer Tee",
 			"it": "Tè nero"		
 		},
+		24750: {
+			"en": "Appliance rinse",
+			"de": "Gerät spülen",
+			"it": "Risciacquo elettrodomestico"		
+		},
 		24759: {
 			"en": "Appliance rinse",
 			"de": "Gerät spülen",
@@ -38,7 +43,7 @@ MIELE_LABELS = {
 		24789: {
 			"en": "Clean milk pipework",
 			"de": "Milchleitung reinigen",
-			"it": "Pulire condotto latte"
+			"it": "Pulizia condotto latte"
 		}
 	}
 }

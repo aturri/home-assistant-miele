@@ -114,6 +114,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
             type=device_type, state="ProgramID"
         ):
             sensors.append(MieleProgramSensor(hass, device))
+            sensors.append(MieleProgramTypeSensor(hass, device))
 
         if "programPhase" in device_state and state_capability(
                 type=device_type, state="programPhase"
@@ -610,8 +611,36 @@ class MieleProgramSensor(MieleRawSensor):
 
         attributes["Name"] = device_state[self._key]["value_localized"]
         attributes["Id"] = device_state[self._key]["value_raw"]
-        attributes["Type"] = device_state["programType"]["value_localized"]
-        attributes["TypeId"] = device_state["programType"]["value_raw"]
+
+        return attributes
+
+
+class MieleProgramTypeSensor(MieleRawSensor):
+    def __init__(self, hass, device):
+        self._hass = hass
+        self._device = device
+        self._key = "programType"
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        raw = self._device["state"][self._key]["value_raw"]
+
+        # No program running
+        if raw == 0:
+            raw = None
+
+        return str(raw)
+
+    @property
+    def extra_state_attributes(self):
+        """Attributes."""
+        device_state = self._device["state"]
+
+        attributes = {}
+
+        attributes["Name"] = device_state[self._key]["value_localized"]
+        attributes["Id"] = device_state[self._key]["value_raw"]
 
         return attributes
 

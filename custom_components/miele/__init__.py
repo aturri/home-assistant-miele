@@ -34,6 +34,7 @@ _CONFIGURING = {}
 DATA_OAUTH = "oauth"
 DATA_DEVICES = "devices"
 DATA_CLIENT = "client"
+DATA_LANG = "lang"
 SERVICE_ACTION = "action"
 SERVICE_START_PROGRAM = "start_program"
 SERVICE_STOP_PROGRAM = "stop_program"
@@ -414,6 +415,7 @@ async def async_setup(hass, config):
         return True
 
     lang = config[DOMAIN].get(CONF_LANG, DEFAULT_LANG)
+    hass.data[DOMAIN][DATA_LANG] = lang
 
     component = EntityComponent(_LOGGER, DOMAIN, hass)
 

@@ -6,8 +6,10 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_registry import async_get_registry
 
 from custom_components.miele import DATA_DEVICES
+from custom_components.miele import DATA_LANG
 from custom_components.miele import DOMAIN as MIELE_DOMAIN
 from custom_components.miele import CAPABILITIES
+from .labels import MIELE_LABELS
 
 PLATFORMS = ["miele"]
 
@@ -111,7 +113,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         if "ProgramID" in device_state and state_capability(
             type=device_type, state="ProgramID"
         ):
-            sensors.append(MieleTextSensor(hass, device, "ProgramID"))
+            sensors.append(MieleProgramSensor(hass, device))
 
         if "programPhase" in device_state and state_capability(
                 type=device_type, state="programPhase"
@@ -570,6 +572,48 @@ class MieleTextSensor(MieleRawSensor):
             result = None
 
         return result
+
+
+class MieleProgramSensor(MieleRawSensor):
+    def __init__(self, hass, device):
+        self._hass = hass
+        self._device = device
+        self._key = "ProgramID"
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        result = self._device["state"][self._key]["value_localized"]
+        raw = self._device["state"][self._key]["value_raw"]
+        lang = self._hass.data[MIELE_DOMAIN][DATA_LANG]
+
+        # No program running
+        if raw == 0:
+            result = None
+
+        # Program running, overridden label
+        if raw in MIELE_LABELS["program_id"] and lang in MIELE_LABELS["program_id"][raw]:
+            result = MIELE_LABELS["program_id"][raw][lang]
+
+        # Program running, no label, use raw value
+        if result == "":
+            result = str(raw)
+
+        return result
+
+    @property
+    def extra_state_attributes(self):
+        """Attributes."""
+        device_state = self._device["state"]
+
+        attributes = {}
+
+        attributes["Name"] = device_state[self._key]["value_localized"]
+        attributes["Id"] = device_state[self._key]["value_raw"]
+        attributes["Type"] = device_state["programType"]["value_localized"]
+        attributes["TypeId"] = device_state["programType"]["value_raw"]
+
+        return attributes
 
 
 class MieleBatterySensor(MieleSensorEntity):

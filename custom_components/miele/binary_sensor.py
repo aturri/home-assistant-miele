@@ -42,6 +42,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         device_type = device["ident"]["type"]["value_raw"]
 
         binary_devices = []
+        binary_devices.append(MielePowerSensor(hass, device))
         if "signalInfo" in device_state and state_capability(type=device_type, state="signalInfo"):
             binary_devices.append(MieleBinarySensor(hass, device, "signalInfo"))
         if "signalFailure" in device_state and state_capability(type=device_type, state="signalFailure"):
@@ -113,6 +114,53 @@ class MieleBinarySensor(BinarySensorEntity):
             return "running"
         else:
             return "problem"
+
+    async def async_update(self):
+        if not self.device_id in self._hass.data[MIELE_DOMAIN][DATA_DEVICES]:
+            _LOGGER.debug("Miele device not found: {}".format(self.device_id))
+        else:
+            self._device = self._hass.data[MIELE_DOMAIN][DATA_DEVICES][self.device_id]
+
+
+class MielePowerSensor(BinarySensorEntity):
+    def __init__(self, hass, device):
+        self._hass = hass
+        self._device = device
+
+    @property
+    def device_id(self):
+        """Return the unique ID for this sensor."""
+        return self._device["ident"]["deviceIdentLabel"]["fabNumber"]
+
+    @property
+    def unique_id(self):
+        """Return the unique ID for this sensor."""
+        return self.device_id + "_power"
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        ident = self._device["ident"]
+
+        result = ident["deviceName"]
+        if len(result) == 0:
+            return ident["type"]["value_localized"] + " Power"
+        else:
+            return result + " Power"
+
+    @property
+    def is_on(self):
+        """Return the state of the sensor."""
+        current_val = self._device["state"]["status"]["value_raw"]
+        if current_val == 1:
+            return False
+        if current_val == 255:
+            return None
+        return True
+
+    @property
+    def device_class(self):
+        return "power"
 
     async def async_update(self):
         if not self.device_id in self._hass.data[MIELE_DOMAIN][DATA_DEVICES]:

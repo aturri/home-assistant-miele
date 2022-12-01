@@ -9,7 +9,7 @@ from custom_components.miele import DATA_DEVICES
 from custom_components.miele import DATA_LANG
 from custom_components.miele import DOMAIN as MIELE_DOMAIN
 from custom_components.miele import CAPABILITIES
-from .labels import MIELE_LABELS
+from .labels import MIELE_PROGRAMS
 
 PLATFORMS = ["miele"]
 
@@ -113,7 +113,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         if "ProgramID" in device_state and state_capability(
             type=device_type, state="ProgramID"
         ):
-            sensors.append(MieleProgramSensor(hass, device))
+            sensors.append(MieleProgramSensor(hass, device, device_type))
             sensors.append(MieleProgramTypeSensor(hass, device))
 
         if "programPhase" in device_state and state_capability(
@@ -576,9 +576,10 @@ class MieleTextSensor(MieleRawSensor):
 
 
 class MieleProgramSensor(MieleRawSensor):
-    def __init__(self, hass, device):
+    def __init__(self, hass, device, device_type):
         self._hass = hass
         self._device = device
+        self._device_type = device_type
         self._key = "ProgramID"
 
     @property
@@ -593,8 +594,12 @@ class MieleProgramSensor(MieleRawSensor):
             result = None
 
         # Program running, overridden label
-        if raw in MIELE_LABELS["program_id"] and lang in MIELE_LABELS["program_id"][raw]:
-            result = MIELE_LABELS["program_id"][raw][lang]
+        if (
+            self._device_type in MIELE_PROGRAMS
+            and raw in MIELE_PROGRAMS[self._device_type]
+            and lang in MIELE_PROGRAMS[self._device_type][raw]
+        ):
+            result = MIELE_PROGRAMS[self._device_type][raw][lang]
 
         # Program running, no label, use raw value
         if result == "":

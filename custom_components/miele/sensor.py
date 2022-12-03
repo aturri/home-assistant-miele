@@ -9,7 +9,7 @@ from custom_components.miele import DATA_DEVICES
 from custom_components.miele import DATA_LANG
 from custom_components.miele import DOMAIN as MIELE_DOMAIN
 from custom_components.miele import CAPABILITIES
-from .labels import MIELE_PROGRAMS
+from .labels import MIELE_TEXT
 
 PLATFORMS = ["miele"]
 
@@ -113,13 +113,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         if "ProgramID" in device_state and state_capability(
             type=device_type, state="ProgramID"
         ):
-            sensors.append(MieleProgramSensor(hass, device, device_type))
-            sensors.append(MieleProgramTypeSensor(hass, device))
+            sensors.append(MieleTextSensor(hass, device, "ProgramID", device_type))
+            sensors.append(MieleRawSensor(hass, device, "programType"))
 
         if "programPhase" in device_state and state_capability(
                 type=device_type, state="programPhase"
         ):
-            sensors.append(MieleTextSensor(hass, device, "programPhase"))
+            sensors.append(MieleTextSensor(hass, device, "programPhase", device_type, False))
 
         if "targetTemperature" in device_state and state_capability(
             type=device_type, state="targetTemperature"
@@ -146,12 +146,12 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         if "dryingStep" in device_state and state_capability(
                 type=device_type, state="dryingStep"
         ):
-            sensors.append(MieleTextSensor(hass, device, "dryingStep"))
+            sensors.append(MieleTextSensor(hass, device, "dryingStep", device_type))
 
         if "spinningSpeed" in device_state and state_capability(
                 type=device_type, state="spinningSpeed"
         ):
-            sensors.append(MieleTextSensor(hass, device, "spinningSpeed"))
+            sensors.append(MieleTextSensor(hass, device, "spinningSpeed", device_type))
 
         if "remainingTime" in device_state and state_capability(
             type=device_type, state="remainingTime"
@@ -238,8 +238,27 @@ class MieleRawSensor(Entity):
     @property
     def state(self):
         """Return the state of the sensor."""
+        raw = self._device["state"][self._key]["value_raw"]
 
-        return self._device["state"][self._key]["value_raw"]
+        # Empty value
+        if raw == 0:
+            raw = None
+
+        return str(raw)
+
+    @property
+    def extra_state_attributes(self):
+        """Attributes."""
+        device_state = self._device["state"]
+
+        attributes = {}
+
+        if self._key in device_state and "value_localized" in device_state[self._key]:
+            attributes["Name"] = device_state[self._key]["value_localized"]
+        if self._key in device_state and "value_raw" in device_state[self._key]:
+            attributes["Id"] = device_state[self._key]["value_raw"]
+
+        return attributes
 
     async def async_update(self):
         if not self.device_id in self._hass.data[MIELE_DOMAIN][DATA_DEVICES]:
@@ -565,22 +584,12 @@ class MieleTemperatureSensor(Entity):
 
 
 class MieleTextSensor(MieleRawSensor):
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        result = self._device["state"][self._key]["value_localized"]
-        if result == "":
-            result = None
-
-        return result
-
-
-class MieleProgramSensor(MieleRawSensor):
-    def __init__(self, hass, device, device_type):
+    def __init__(self, hass, device, key, device_type, use_raw=True):
         self._hass = hass
         self._device = device
         self._device_type = device_type
-        self._key = "ProgramID"
+        self._key = key
+        self._use_raw = use_raw
 
     @property
     def state(self):
@@ -595,59 +604,21 @@ class MieleProgramSensor(MieleRawSensor):
 
         # Program running, overridden label
         if (
-            self._device_type in MIELE_PROGRAMS
-            and raw in MIELE_PROGRAMS[self._device_type]
-            and lang in MIELE_PROGRAMS[self._device_type][raw]
+            self._key in MIELE_TEXT
+            and self._device_type in MIELE_TEXT[self._key]
+            and raw in MIELE_TEXT[self._key][self._device_type]
+            and lang in MIELE_TEXT[self._key][self._device_type][raw]
         ):
-            result = MIELE_PROGRAMS[self._device_type][raw][lang]
+            result = MIELE_TEXT[self._key][self._device_type][raw][lang]
 
         # Program running, no label, use raw value
-        if result == "":
+        if result == "" and self._use_raw:
             result = str(raw)
+        elif result == "" and not self._use_raw:
+            result = None
 
         return result
 
-    @property
-    def extra_state_attributes(self):
-        """Attributes."""
-        device_state = self._device["state"]
-
-        attributes = {}
-
-        attributes["Name"] = device_state[self._key]["value_localized"]
-        attributes["Id"] = device_state[self._key]["value_raw"]
-
-        return attributes
-
-
-class MieleProgramTypeSensor(MieleRawSensor):
-    def __init__(self, hass, device):
-        self._hass = hass
-        self._device = device
-        self._key = "programType"
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        raw = self._device["state"][self._key]["value_raw"]
-
-        # No program running
-        if raw == 0:
-            raw = None
-
-        return str(raw)
-
-    @property
-    def extra_state_attributes(self):
-        """Attributes."""
-        device_state = self._device["state"]
-
-        attributes = {}
-
-        attributes["Name"] = device_state[self._key]["value_localized"]
-        attributes["Id"] = device_state[self._key]["value_raw"]
-
-        return attributes
 
 
 class MieleBatterySensor(MieleSensorEntity):

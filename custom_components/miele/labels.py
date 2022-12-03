@@ -101,3 +101,7 @@ MIELE_PROGRAMS = {
 		}
 	}
 }
+
+MIELE_TEXT = {
+	"ProgramID": MIELE_PROGRAMS
+}

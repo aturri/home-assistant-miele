@@ -180,7 +180,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
                 type=device_type, state="ecoFeedback.waterConsumption"
         ):
             sensors.append(
-                MieleConsumptionSensor(hass, device, "waterConsumption", "L", None)
+                MieleConsumptionSensor(hass, device, "waterConsumption", "L", SensorDeviceClass.WATER)
             )
             sensors.append(
                 MieleConsumptionForecastSensor(hass, device, "waterForecast")
